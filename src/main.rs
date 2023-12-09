@@ -27,6 +27,11 @@ fn main() {
                         authority_records: 0,
                         additional_records: 0,
                     },
+                    questions: vec![Question {
+                        name: "codecrafters.io".into(),
+                        q_type: 1,
+                        class: 1,
+                    }],
                 };
 
                 packet.write_to(&mut response);
@@ -45,6 +50,7 @@ fn main() {
 
 struct Packet {
     header: Header,
+    questions: Vec<Question>,
 }
 
 struct Header {
@@ -63,15 +69,61 @@ struct Header {
     additional_records: u16,
 }
 
+struct Question {
+    name: Qname,
+    q_type: u16,
+    class: u16,
+}
+
+impl Question {
+    pub fn parse(data: &[u8]) -> Result<Self, &'static str> {
+        Err("invalid")
+    }
+
+    pub fn write_to(self, buf: &mut Vec<u8>) {
+        self.name.write_to(buf);
+        buf.extend(self.q_type.to_be_bytes());
+        buf.extend(self.class.to_be_bytes());
+    }
+}
+
+struct Qname(Vec<(u8, String)>);
+
+impl Qname {
+    pub fn write_to(&self, buf: &mut Vec<u8>) {
+        for (i, v) in &self.0 {
+            buf.push(*i);
+            buf.extend(v.bytes());
+        }
+    }
+}
+
+impl From<&str> for Qname {
+    fn from(value: &str) -> Self {
+        let mut output = vec![];
+
+        for label in value.split('.') {
+            output.push((label.len() as u8, label.to_string()));
+        }
+
+        Qname(output)
+    }
+}
+
 impl Packet {
     pub fn parse(data: &[u8]) -> Result<Self, &'static str> {
         let header = Header::parse(&data[..12])?;
+        let questions = vec![Question::parse(&data[12..])?]; // TODO: need some thing better here
 
-        Ok(Self { header })
+        Ok(Self { header, questions })
     }
 
     pub fn write_to(self, buf: &mut Vec<u8>) {
         self.header.write_to(buf);
+
+        for question in self.questions {
+            question.write_to(buf);
+        }
     }
 }
 
