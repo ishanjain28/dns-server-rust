@@ -95,6 +95,8 @@ impl Qname {
             buf.push(*i);
             buf.extend(v.bytes());
         }
+
+        buf.push(0);
     }
 }
 
