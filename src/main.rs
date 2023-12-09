@@ -23,7 +23,7 @@ fn main() {
                         reserved: 0,
                         rcode: 0,
                         qd_count: 1,
-                        answer_records: 0,
+                        an_count: 1,
                         authority_records: 0,
                         additional_records: 0,
                     },
@@ -31,6 +31,14 @@ fn main() {
                         name: "codecrafters.io".into(),
                         q_type: 1,
                         class: 1,
+                    }],
+                    answers: vec![RRecord {
+                        name: "codecrafters.io".into(),
+                        class: 1,
+                        r_type: 1,
+                        ttl: 1337,
+                        rdlength: 4,
+                        data: RData::A([0x8, 0x8, 0x8, 0x8]),
                     }],
                 };
 
@@ -48,11 +56,6 @@ fn main() {
     }
 }
 
-struct Packet {
-    header: Header,
-    questions: Vec<Question>,
-}
-
 struct Header {
     ident: u16,
     query: bool,
@@ -64,11 +67,56 @@ struct Header {
     reserved: u8,
     rcode: u8, // TODO: enum
     qd_count: u16,
-    answer_records: u16,
+    an_count: u16,
     authority_records: u16,
     additional_records: u16,
 }
 
+impl Header {
+    pub fn parse(data: &[u8]) -> Result<Self, &'static str> {
+        if data.len() != 12 {
+            return Err("input bytes len is not equal to 12");
+        }
+
+        Ok(Self {
+            ident: u16::from_be_bytes([data[0], data[1]]),
+            query: ((data[2] >> 7) & 1) == 1,
+            opcode: (data[2] >> 3),
+            authoritative: ((data[2] >> 2) & 1) == 1,
+            truncated: ((data[2] >> 1) & 1) == 1,
+            recursion_desired: (data[2] & 1) == 1,
+            recursion_avail: ((data[3] >> 7) & 1) == 1,
+            reserved: ((data[3] >> 4) & 0b111),
+            rcode: (data[3] & 0b1111),
+            qd_count: u16::from_be_bytes([data[4], data[5]]),
+            an_count: u16::from_be_bytes([data[6], data[7]]),
+            authority_records: u16::from_be_bytes([data[8], data[9]]),
+            additional_records: u16::from_be_bytes([data[10], data[11]]),
+        })
+    }
+
+    pub fn write_to(self, buf: &mut Vec<u8>) {
+        // write ident
+        buf.extend(self.ident.to_be_bytes());
+
+        // Write flags
+        let flag0_byte = (self.query as u8) << 7
+            | self.opcode << 3
+            | (self.authoritative as u8) << 2
+            | (self.truncated as u8) << 1
+            | self.recursion_desired as u8;
+        let flag1_byte = (self.recursion_avail as u8) << 7 | self.reserved << 4 | self.rcode;
+
+        buf.push(flag0_byte);
+        buf.push(flag1_byte);
+
+        // Write counts
+        buf.extend(self.qd_count.to_be_bytes());
+        buf.extend(self.an_count.to_be_bytes());
+        buf.extend(self.authority_records.to_be_bytes());
+        buf.extend(self.additional_records.to_be_bytes());
+    }
+}
 struct Question {
     name: Qname,
     q_type: u16,
@@ -112,12 +160,62 @@ impl From<&str> for Qname {
     }
 }
 
+struct RRecord {
+    name: Qname,
+    r_type: u16,
+    class: u16,
+    ttl: u32,
+    rdlength: u16,
+    data: RData,
+}
+
+impl RRecord {
+    pub fn parse(data: &[u8]) -> Result<Self, &'static str> {
+        todo!()
+    }
+
+    pub fn write_to(self, buf: &mut Vec<u8>) {
+        self.name.write_to(buf);
+        buf.extend(self.r_type.to_be_bytes());
+        buf.extend(self.class.to_be_bytes());
+        buf.extend(self.ttl.to_be_bytes());
+        buf.extend(self.rdlength.to_be_bytes());
+
+        self.data.write_to(buf);
+    }
+}
+
+enum RData {
+    A([u8; 4]),
+    Aaaa([u8; 16]),
+}
+
+impl RData {
+    pub fn write_to(self, buf: &mut Vec<u8>) {
+        match self {
+            RData::A(addr) => buf.extend(addr),
+            RData::Aaaa(addr) => buf.extend(addr),
+        }
+    }
+}
+
+struct Packet {
+    header: Header,
+    questions: Vec<Question>,
+    answers: Vec<RRecord>,
+}
+
 impl Packet {
     pub fn parse(data: &[u8]) -> Result<Self, &'static str> {
         let header = Header::parse(&data[..12])?;
         let questions = vec![Question::parse(&data[12..])?]; // TODO: need some thing better here
+        let answers = vec![RRecord::parse(&data[12..])?]; // TODO: need some thing better here
 
-        Ok(Self { header, questions })
+        Ok(Self {
+            header,
+            questions,
+            answers,
+        })
     }
 
     pub fn write_to(self, buf: &mut Vec<u8>) {
@@ -126,51 +224,9 @@ impl Packet {
         for question in self.questions {
             question.write_to(buf);
         }
-    }
-}
 
-impl Header {
-    pub fn parse(data: &[u8]) -> Result<Self, &'static str> {
-        if data.len() != 12 {
-            return Err("input bytes len is not equal to 12");
+        for answer in self.answers {
+            answer.write_to(buf);
         }
-
-        Ok(Self {
-            ident: u16::from_be_bytes([data[0], data[1]]),
-            query: ((data[2] >> 7) & 1) == 1,
-            opcode: (data[2] >> 3),
-            authoritative: ((data[2] >> 2) & 1) == 1,
-            truncated: ((data[2] >> 1) & 1) == 1,
-            recursion_desired: (data[2] & 1) == 1,
-            recursion_avail: ((data[3] >> 7) & 1) == 1,
-            reserved: ((data[3] >> 4) & 0b111),
-            rcode: (data[3] & 0b1111),
-            qd_count: u16::from_be_bytes([data[4], data[5]]),
-            answer_records: u16::from_be_bytes([data[6], data[7]]),
-            authority_records: u16::from_be_bytes([data[8], data[9]]),
-            additional_records: u16::from_be_bytes([data[10], data[11]]),
-        })
-    }
-
-    pub fn write_to(self, buf: &mut Vec<u8>) {
-        // write ident
-        buf.extend(self.ident.to_be_bytes());
-
-        // Write flags
-        let flag0_byte = (self.query as u8) << 7
-            | self.opcode << 3
-            | (self.authoritative as u8) << 2
-            | (self.truncated as u8) << 1
-            | self.recursion_desired as u8;
-        let flag1_byte = (self.recursion_avail as u8) << 7 | self.reserved << 4 | self.rcode;
-
-        buf.push(flag0_byte);
-        buf.push(flag1_byte);
-
-        // Write counts
-        buf.extend(self.qd_count.to_be_bytes());
-        buf.extend(self.answer_records.to_be_bytes());
-        buf.extend(self.authority_records.to_be_bytes());
-        buf.extend(self.additional_records.to_be_bytes());
     }
 }
