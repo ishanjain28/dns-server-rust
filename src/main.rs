@@ -82,8 +82,8 @@ impl Question {
 
     pub fn write_to(self, buf: &mut Vec<u8>) {
         self.name.write_to(buf);
-        buf.extend(self.q_type.to_be_bytes());
-        buf.extend(self.class.to_be_bytes());
+        buf.extend(self.q_type.to_le_bytes());
+        buf.extend(self.class.to_le_bytes());
     }
 }
 
@@ -166,9 +166,9 @@ impl Header {
         buf.push(flag1_byte);
 
         // Write counts
-        buf.extend(self.question_records.to_be_bytes());
-        buf.extend(self.answer_records.to_be_bytes());
-        buf.extend(self.authority_records.to_be_bytes());
-        buf.extend(self.additional_records.to_be_bytes());
+        buf.extend(self.question_records.to_le_bytes());
+        buf.extend(self.answer_records.to_le_bytes());
+        buf.extend(self.authority_records.to_le_bytes());
+        buf.extend(self.additional_records.to_le_bytes());
     }
 }
