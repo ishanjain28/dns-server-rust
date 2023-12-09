@@ -9,7 +9,28 @@ fn main() {
             Ok((size, source)) => {
                 let _received_data = String::from_utf8_lossy(&buf[0..size]);
                 println!("Received {} bytes from {}", size, source);
-                let response = [];
+                let mut response = vec![];
+
+                let packet = Packet {
+                    header: Header {
+                        ident: 1234,
+                        query: true,
+                        opcode: 0,
+                        authoritative: false,
+                        truncated: false,
+                        recursion_desired: false,
+                        recursion_avail: false,
+                        reserved: 0,
+                        rcode: 0,
+                        question_records: 0,
+                        answer_records: 0,
+                        authority_records: 0,
+                        additional_records: 0,
+                    },
+                };
+
+                packet.write_to(&mut response);
+
                 udp_socket
                     .send_to(&response, source)
                     .expect("Failed to send response");
@@ -19,5 +40,83 @@ fn main() {
                 break;
             }
         }
+    }
+}
+
+struct Packet {
+    header: Header,
+}
+
+struct Header {
+    ident: u16,
+    query: bool,
+    opcode: u8, // TODO: enum
+    authoritative: bool,
+    truncated: bool,
+    recursion_desired: bool,
+    recursion_avail: bool,
+    reserved: u8,
+    rcode: u8, // TODO: enum
+    question_records: u16,
+    answer_records: u16,
+    authority_records: u16,
+    additional_records: u16,
+}
+
+impl Packet {
+    pub fn parse(data: &[u8]) -> Result<Self, &'static str> {
+        let header = Header::parse(&data[..12])?;
+
+        Ok(Self { header })
+    }
+
+    pub fn write_to(self, buf: &mut Vec<u8>) {
+        self.header.write_to(buf);
+    }
+}
+
+impl Header {
+    pub fn parse(data: &[u8]) -> Result<Self, &'static str> {
+        if data.len() != 12 {
+            return Err("input bytes len is not equal to 12");
+        }
+
+        Ok(Self {
+            ident: u16::from_be_bytes([data[0], data[1]]),
+            query: ((data[2] >> 7) & 1) == 1,
+            opcode: (data[2] >> 3),
+            authoritative: ((data[2] >> 2) & 1) == 1,
+            truncated: ((data[2] >> 1) & 1) == 1,
+            recursion_desired: (data[2] & 1) == 1,
+            recursion_avail: ((data[3] >> 7) & 1) == 1,
+            reserved: ((data[3] >> 4) & 0b111),
+            rcode: (data[3] & 0b1111),
+            question_records: u16::from_be_bytes([data[4], data[5]]),
+            answer_records: u16::from_be_bytes([data[6], data[7]]),
+            authority_records: u16::from_be_bytes([data[8], data[9]]),
+            additional_records: u16::from_be_bytes([data[10], data[11]]),
+        })
+    }
+
+    pub fn write_to(self, buf: &mut Vec<u8>) {
+        // write ident
+        buf.extend(self.ident.to_be_bytes());
+
+        // Write flags
+        let flag0_byte = (self.query as u8) << 7
+            | self.opcode << 3
+            | (self.authoritative as u8) << 2
+            | (self.truncated as u8) << 1
+            | self.recursion_desired as u8;
+        let flag1_byte = (self.recursion_avail as u8) << 7 | self.reserved << 4 | self.rcode;
+
+        buf.push(flag0_byte);
+        buf.push(flag1_byte);
+
+        // Write counts
+        buf.extend(self.question_records.to_be_bytes());
+        buf.extend(self.answer_records.to_be_bytes());
+        buf.extend(self.authority_records.to_be_bytes());
+        buf.extend(self.additional_records.to_be_bytes());
     }
 }
