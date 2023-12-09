@@ -22,7 +22,7 @@ fn main() {
                         recursion_avail: false,
                         reserved: 0,
                         rcode: 0,
-                        question_records: 0,
+                        question_records: 1,
                         answer_records: 0,
                         authority_records: 0,
                         additional_records: 0,
