@@ -7,42 +7,20 @@ fn main() {
     loop {
         match udp_socket.recv_from(&mut buf) {
             Ok((size, source)) => {
-                let _received_data = String::from_utf8_lossy(&buf[0..size]);
+                let received_data = &buf[0..size];
                 println!("Received {} bytes from {}", size, source);
                 let mut response = vec![];
 
-                let packet = Packet {
-                    header: Header {
-                        ident: 1234,
-                        query: true,
-                        opcode: 0,
-                        authoritative: false,
-                        truncated: false,
-                        recursion_desired: false,
-                        recursion_avail: false,
-                        reserved: 0,
-                        rcode: 0,
-                        qd_count: 1,
-                        an_count: 1,
-                        authority_records: 0,
-                        additional_records: 0,
-                    },
-                    questions: vec![Question {
-                        name: "codecrafters.io".into(),
-                        q_type: 1,
-                        class: 1,
-                    }],
-                    answers: vec![RRecord {
-                        name: "codecrafters.io".into(),
-                        class: 1,
-                        r_type: 1,
-                        ttl: 1337,
-                        rdlength: 4,
-                        data: RData::A([0x8, 0x8, 0x8, 0x8]),
-                    }],
-                };
+                let mut recv_packet = Packet::parse(received_data).unwrap();
 
-                packet.write_to(&mut response);
+                recv_packet.header.query = true;
+                recv_packet.header.authoritative = false;
+                recv_packet.header.truncated = false;
+                recv_packet.header.recursion_avail = false;
+                recv_packet.header.reserved = 0;
+                recv_packet.header.rcode = if recv_packet.header.opcode == 0 { 0 } else { 4 };
+
+                recv_packet.write_to(&mut response);
 
                 udp_socket
                     .send_to(&response, source)
@@ -208,13 +186,13 @@ struct Packet {
 impl Packet {
     pub fn parse(data: &[u8]) -> Result<Self, &'static str> {
         let header = Header::parse(&data[..12])?;
-        let questions = vec![Question::parse(&data[12..])?]; // TODO: need some thing better here
-        let answers = vec![RRecord::parse(&data[12..])?]; // TODO: need some thing better here
+        //       let questions = vec![Question::parse(&data[12..])?]; // TODO: need some thing better here
+        //        let answers = vec![RRecord::parse(&data[12..])?]; // TODO: need some thing better here
 
         Ok(Self {
             header,
-            questions,
-            answers,
+            questions: vec![],
+            answers: vec![],
         })
     }
 
