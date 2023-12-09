@@ -19,6 +19,10 @@ fn main() {
                 recv_packet.header.recursion_avail = false;
                 recv_packet.header.reserved = 0;
                 recv_packet.header.rcode = if recv_packet.header.opcode == 0 { 0 } else { 4 };
+                recv_packet.header.qd_count = 0;
+                recv_packet.header.an_count = 0;
+                recv_packet.header.authority_records = 0;
+                recv_packet.header.additional_records = 0;
 
                 recv_packet.write_to(&mut response);
 
