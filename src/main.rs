@@ -19,10 +19,25 @@ fn main() {
                 recv_packet.header.recursion_avail = false;
                 recv_packet.header.reserved = 0;
                 recv_packet.header.rcode = if recv_packet.header.opcode == 0 { 0 } else { 4 };
-                recv_packet.header.qd_count = 0;
-                recv_packet.header.an_count = 0;
+                recv_packet.header.qd_count = 1;
+                recv_packet.header.an_count = 1;
                 recv_packet.header.authority_records = 0;
                 recv_packet.header.additional_records = 0;
+
+                recv_packet.questions = vec![Question {
+                    name: "codecrafters.io".into(),
+                    q_type: 1,
+                    class: 1,
+                }];
+
+                recv_packet.answers = vec![RRecord {
+                    name: "codecrafters.io".into(),
+                    class: 1,
+                    r_type: 1,
+                    ttl: 1337,
+                    rdlength: 4,
+                    data: RData::A([0x8, 0x8, 0x8, 0x8]),
+                }];
 
                 recv_packet.write_to(&mut response);
 
