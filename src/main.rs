@@ -22,7 +22,7 @@ fn main() {
                         recursion_avail: false,
                         reserved: 0,
                         rcode: 0,
-                        question_records: 1,
+                        qd_count: 1,
                         answer_records: 0,
                         authority_records: 0,
                         additional_records: 0,
@@ -63,7 +63,7 @@ struct Header {
     recursion_avail: bool,
     reserved: u8,
     rcode: u8, // TODO: enum
-    question_records: u16,
+    qd_count: u16,
     answer_records: u16,
     authority_records: u16,
     additional_records: u16,
@@ -82,8 +82,8 @@ impl Question {
 
     pub fn write_to(self, buf: &mut Vec<u8>) {
         self.name.write_to(buf);
-        buf.extend(self.q_type.to_le_bytes());
-        buf.extend(self.class.to_le_bytes());
+        buf.extend(self.q_type.to_be_bytes());
+        buf.extend(self.class.to_be_bytes());
     }
 }
 
@@ -145,7 +145,7 @@ impl Header {
             recursion_avail: ((data[3] >> 7) & 1) == 1,
             reserved: ((data[3] >> 4) & 0b111),
             rcode: (data[3] & 0b1111),
-            question_records: u16::from_be_bytes([data[4], data[5]]),
+            qd_count: u16::from_be_bytes([data[4], data[5]]),
             answer_records: u16::from_be_bytes([data[6], data[7]]),
             authority_records: u16::from_be_bytes([data[8], data[9]]),
             additional_records: u16::from_be_bytes([data[10], data[11]]),
@@ -168,9 +168,9 @@ impl Header {
         buf.push(flag1_byte);
 
         // Write counts
-        buf.extend(self.question_records.to_le_bytes());
-        buf.extend(self.answer_records.to_le_bytes());
-        buf.extend(self.authority_records.to_le_bytes());
-        buf.extend(self.additional_records.to_le_bytes());
+        buf.extend(self.qd_count.to_be_bytes());
+        buf.extend(self.answer_records.to_be_bytes());
+        buf.extend(self.authority_records.to_be_bytes());
+        buf.extend(self.additional_records.to_be_bytes());
     }
 }
