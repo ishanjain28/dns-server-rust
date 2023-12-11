@@ -31,12 +31,8 @@ fn main() {
                     packet.header.qd_count = 1;
                     packet.questions = vec![question.clone()];
 
-                    println!("sent packet: {:?}", packet);
-
                     let mut data = vec![];
                     packet.write_to(&mut data);
-
-                    println!("written packet: {:?}", data);
 
                     upstream_socket
                         .send_to(&data, resolver)
@@ -71,7 +67,6 @@ fn main() {
                     }
                 }
 
-                println!("{:?}", upstream_packets);
                 recv_packet.answers = upstream_packets
                     .into_iter()
                     .filter(|x| x.is_some())
