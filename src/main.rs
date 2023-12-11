@@ -25,6 +25,8 @@ fn main() {
                 println!("Received {} bytes from {}", size, source);
                 let received_data = &buf[0..size];
 
+                println!("{:0x?}", received_data);
+
                 upstream_socket
                     .send_to(received_data, resolver)
                     .expect("error in sending data to upstream");
@@ -51,6 +53,10 @@ fn main() {
                         recv_packet.header.an_count = recv_packet.header.qd_count;
                         recv_packet.header.authority_records = 0;
                         recv_packet.header.additional_records = 0;
+
+                        for question in recv_packet.questions.iter() {
+                            println!("{}", question.name);
+                        }
 
                         recv_packet.answers = upstream_packet.answers;
 
