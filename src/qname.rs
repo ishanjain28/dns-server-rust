@@ -54,31 +54,6 @@ impl<'a> Qname<'a> {
     pub fn length(&self) -> usize {
         self.length
     }
-
-    pub fn labels(&'a self) -> Vec<&'a [u8]> {
-        let mut lookup: &[u8] = &self.name;
-
-        let mut out = vec![];
-
-        let mut i = 0;
-        while i < lookup.len() - 1 && lookup[i + 1] != 0 {
-            let is_pointer = (lookup[i] & 0xc0) == 0xc0;
-
-            if is_pointer {
-                let offset: u16 = (((lookup[i] & !0xc0) as u16) << 8) | lookup[i + 1] as u16;
-
-                i = offset as usize;
-                lookup = &self.original;
-            } else {
-                let length = lookup[i] as usize;
-
-                out.push(&lookup[i + 1..i + length + 1]);
-                i += length + 1;
-            }
-        }
-
-        out
-    }
 }
 
 impl<'a> Display for Qname<'a> {
