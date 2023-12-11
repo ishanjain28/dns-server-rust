@@ -8,8 +8,8 @@ pub struct Question<'a> {
 }
 
 impl<'a> Question<'a> {
-    pub fn parse(mut data: &'a [u8]) -> Result<Self, &'static str> {
-        let qname = Qname::parse(data);
+    pub fn parse(mut data: &'a [u8], original: &'a [u8]) -> Result<Self, &'static str> {
+        let qname = Qname::parse(data, original)?;
         data = &data[qname.length()..];
 
         debug_assert!(data.len() >= 4);

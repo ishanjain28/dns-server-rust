@@ -11,8 +11,8 @@ pub struct RRecord<'a> {
 }
 
 impl<'a> RRecord<'a> {
-    pub fn parse(mut data: &'a [u8]) -> Result<Self, &'static str> {
-        let qname = Qname::parse(data);
+    pub fn parse(mut data: &'a [u8], original: &'a [u8]) -> Result<Self, &'static str> {
+        let qname = Qname::parse(data, original)?;
         data = &data[qname.length()..];
         debug_assert!(data.len() >= 10);
 
