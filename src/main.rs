@@ -50,13 +50,9 @@ fn main() {
                         recv_packet.header.reserved = 0;
                         recv_packet.header.rcode =
                             if recv_packet.header.opcode == 0 { 0 } else { 4 };
-                        recv_packet.header.an_count = recv_packet.header.qd_count;
+                        recv_packet.header.an_count = upstream_packet.header.an_count;
                         recv_packet.header.authority_records = 0;
                         recv_packet.header.additional_records = 0;
-
-                        for question in recv_packet.questions.iter() {
-                            println!("{}", question.name);
-                        }
 
                         recv_packet.answers = upstream_packet.answers;
 
@@ -132,6 +128,27 @@ impl<'a> Packet<'a> {
 #[cfg(test)]
 mod test {
     use crate::Packet;
+
+    #[test]
+    fn parse_multiple_questions() {
+        let data = [
+            0xc2, 0xa5, 0x1, 0x0, 0x0, 0x2, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3, 0x61, 0x62, 0x63,
+            0x11, 0x6c, 0x6f, 0x6e, 0x67, 0x61, 0x73, 0x73, 0x64, 0x6f, 0x6d, 0x61, 0x69, 0x6e,
+            0x6e, 0x61, 0x6d, 0x65, 0x3, 0x63, 0x6f, 0x6d, 0x0, 0x0, 0x1, 0x0, 0x1, 0x3, 0x64,
+            0x65, 0x66, 0xc0, 0x10, 0x0, 0x1, 0x0, 0x1,
+        ];
+
+        let packet = match Packet::parse(&data) {
+            Ok(v) => v,
+            Err(e) => {
+                panic!("error in parsing packet: {}", e);
+            }
+        };
+
+        for question in packet.questions {
+            println!("{}", question.name);
+        }
+    }
 
     #[test]
     fn parse_compressed_packet() {
