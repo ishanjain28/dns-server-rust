@@ -67,6 +67,7 @@ fn main() {
                     }
                 }
 
+                println!("{:?}", upstream_packets);
                 recv_packet.answers = upstream_packets
                     .into_iter()
                     .filter(|x| x.is_some())
@@ -75,11 +76,12 @@ fn main() {
                             if packet.answers.is_empty() {
                                 return None;
                             }
-                            Some(packet.answers[0].clone())
+                            Some(packet.answers.clone())
                         } else {
                             None
                         }
                     })
+                    .flatten()
                     .collect();
 
                 let mut response = vec![];
