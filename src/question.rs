@@ -1,6 +1,6 @@
 use crate::qname::Qname;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Question<'a> {
     pub name: Qname<'a>,
     pub q_type: u16,

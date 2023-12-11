@@ -1,6 +1,6 @@
 use crate::qname::Qname;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RRecord<'a> {
     pub name: Qname<'a>,
     pub r_type: u16,
@@ -60,17 +60,15 @@ impl<'a> RRecord<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum RData {
     A([u8; 4]),
-    Aaaa([u8; 16]),
 }
 
 impl RData {
     pub fn write_to(self, buf: &mut Vec<u8>) {
         match self {
             RData::A(addr) => buf.extend(addr),
-            RData::Aaaa(addr) => buf.extend(addr),
         }
     }
 }

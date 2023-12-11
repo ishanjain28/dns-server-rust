@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Header {
     pub ident: u16,
     pub query: bool,
