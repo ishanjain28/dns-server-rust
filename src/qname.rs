@@ -12,7 +12,28 @@ pub struct Qname<'a> {
 
 impl<'a> Qname<'a> {
     pub fn write_to(&self, buf: &mut Vec<u8>) {
-        buf.extend(self.name.iter());
+        let mut i = 0;
+        let mut lookup: &[u8] = &self.name;
+
+        while i < lookup.len() - 1 && lookup[i + 1] != 0 {
+            let is_pointer = (lookup[i] & 0xc0) == 0xc0;
+
+            if is_pointer {
+                let offset: u16 = (((lookup[i] & !0xc0) as u16) << 8) | lookup[i + 1] as u16;
+                i = offset as usize;
+                lookup = &self.original;
+            } else {
+                let length = lookup[i] as usize;
+
+                buf.push(length as u8);
+
+                buf.extend(&lookup[i + 1..i + 1 + length]);
+
+                i += length + 1;
+            }
+        }
+
+        buf.push(0x0);
     }
 
     // Assume data _starts_ at the question section

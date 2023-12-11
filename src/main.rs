@@ -36,6 +36,8 @@ fn main() {
                     let mut data = vec![];
                     packet.write_to(&mut data);
 
+                    println!("written packet: {:?}", data);
+
                     upstream_socket
                         .send_to(&data, resolver)
                         .expect("error in sending data to upstream");
