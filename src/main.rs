@@ -17,7 +17,7 @@ fn main() {
     let upstream_socket =
         UdpSocket::bind("0.0.0.0:31000").expect("Failed to bind to upstream address");
     let udp_socket = UdpSocket::bind("127.0.0.1:2053").expect("Failed to bind to address");
-    let mut buf = [0; 512];
+    let mut buf = [0; 1500];
 
     loop {
         match udp_socket.recv_from(&mut buf) {
@@ -30,6 +30,8 @@ fn main() {
                     let mut packet = recv_packet.clone();
                     packet.header.qd_count = 1;
                     packet.questions = vec![question.clone()];
+
+                    println!("sent packet: {:?}", packet);
 
                     let mut data = vec![];
                     packet.write_to(&mut data);
@@ -48,7 +50,7 @@ fn main() {
                 recv_packet.header.authority_records = 0;
                 recv_packet.header.additional_records = 0;
 
-                let mut responses = vec![[0; 512]; recv_packet.header.qd_count as usize];
+                let mut responses = vec![[0; 1500]; recv_packet.header.qd_count as usize];
                 let mut upstream_packets = vec![None; recv_packet.header.qd_count as usize];
 
                 for (lbuf, packet) in responses.iter_mut().zip(upstream_packets.iter_mut()) {
